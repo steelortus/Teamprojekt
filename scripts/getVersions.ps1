@@ -94,7 +94,6 @@ else {
                         -not ($findings | Where-Object { $_.Value -eq $value })) {
                         $findings.Add([PSCustomObject]@{
                             Source   = $file.FullName.Substring($resultFolder.Length).TrimStart('\')
-                            Property = "Possible application/version reference"
                             Value    = $value
                         })
                     }
@@ -112,8 +111,8 @@ else {
         Write-Host ""
 
         $findings |
-            Sort-Object Source, Property, Value -Unique |
-            Format-Table Source, Property, Value -AutoSize -Wrap |
+            Sort-Object Source, Value -Unique |
+            Format-Table Source, Value -AutoSize -Wrap |
             Out-Host
     }
     else {

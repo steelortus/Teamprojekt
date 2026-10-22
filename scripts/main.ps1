@@ -4,15 +4,15 @@ $scriptFolder = $PSScriptRoot
 $scripts = @(
     "fileToFolder.ps1",
     "getAuthor.ps1",
-    "getVersions.ps1"
+    "getVersions.ps1"# TODO getFonts / saveFonts / checkFontDate
 )
 
 while ($true) {
     Clear-Host
 
-    Write-Host "==============================" -ForegroundColor Cyan
-    Write-Host "       SCRIPT LAUNCHER" -ForegroundColor Cyan
-    Write-Host "==============================" -ForegroundColor Cyan
+    Write-Host "====================================" -ForegroundColor Cyan
+    Write-Host "      FORENSIC SCRIPT LAUNCHER" -ForegroundColor Cyan
+    Write-Host "====================================" -ForegroundColor Cyan
     Write-Host ""
 
     for ($i = 0; $i -lt $scripts.Count; $i++) {
