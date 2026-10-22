@@ -1,1 +1,5 @@
 Ziele.odt
+scripts/result
+scirpts/result-[0-9]*
+scripts/*.zip
+scripts/output.csv

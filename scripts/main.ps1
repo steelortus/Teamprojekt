@@ -4,7 +4,8 @@ $scriptFolder = $PSScriptRoot
 $scripts = @(
     "fileToFolder.ps1",
     "getAuthor.ps1",
-    "getVersions.ps1"# TODO getFonts / saveFonts / checkFontDate
+    "getVersions.ps1",
+    "printCsv.ps1"# TODO getFonts / saveFonts / checkFontDate
 )
 
 while ($true) {
