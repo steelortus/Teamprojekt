@@ -109,6 +109,7 @@ while ($true) {
 
 # Clean up the environment variable when exiting
 Remove-Item Env:\SELECTED_RESULT_FOLDER -ErrorAction SilentlyContinue
+Remove-Item Env:\SELECTED_FILENAME -ErrorAction SilentlyContinue
 
 Write-Host "Goodbye!" -ForegroundColor Cyan
 
