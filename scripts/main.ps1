@@ -5,7 +5,8 @@ $scripts = @(
     "fileToFolder.ps1",
     "getAuthor.ps1",
     "getVersions.ps1",
-    "printCsv.ps1"# TODO getFonts / saveFonts / checkFontDate
+    "printCsv.ps1",
+    "csvByXslt.ps1"# TODO getFonts / saveFonts / checkFontDate
 )
 
 while ($true) {
@@ -44,17 +45,10 @@ while ($true) {
     if ([int]$choice -ne 1) {
         $resultFolders = @(
             Get-ChildItem -LiteralPath $scriptFolder -Directory |
-            Where-Object {
-                $_.Name -match '^result(-\d+)?$'
-            } |
-            Sort-Object {
-                if ($_.Name -eq "result") {
-                    1
-                }
-                else {
-                    [int]($_.Name -replace '^result-', '')
-                }
-            }
+                Where-Object {
+                    $_.Name -match '^result-.+'
+                } |
+                Sort-Object Name
         )
 
         if ($resultFolders.Count -eq 0) {

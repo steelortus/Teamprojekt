@@ -1,36 +1,42 @@
-
 # Use the current working directory
 $currentFolder = Get-Location
 
-# Ask the user for the Excel file name
-$fileName = Read-Host "Enter the Excel file name (e.g. TestFile.xlsx)"
+# Ask for the file name
+$fileName = Read-Host "Enter the file name (e.g. TestFile.docx)"
 
-# Build the full path to the Excel file
 $filePath = Join-Path $currentFolder $fileName
 
 # Check whether the file exists
 if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
     Write-Host "Error: File not found: $filePath" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit
+    Read-Host "Press Enter to return to the menu"
+    return
 }
 
-# Determine the output folder name
-$resultFolder = Join-Path $currentFolder "result"
+# Get filename without extension
+$baseName = [System.IO.Path]::GetFileNameWithoutExtension($fileName)
+
+# Create result folder name
+$folderName = "result-$baseName"
+$resultFolder = Join-Path $currentFolder $folderName
+
+# Avoid overwriting an existing result folder
 $counter = 2
 
 while (Test-Path -LiteralPath $resultFolder) {
-    $resultFolder = Join-Path $currentFolder "result-$counter"
+    $folderName = "result-$baseName-$counter"
+    $resultFolder = Join-Path $currentFolder $folderName
     $counter++
 }
 
-# Create the output folder
-New-Item -ItemType Directory -Path $resultFolder -Force | Out-Null
-
-Write-Host "Extracting '$fileName'..." -ForegroundColor Cyan
-
 try {
-    # Extract the Excel archive into the new folder
+    # Create the destination folder
+    New-Item -ItemType Directory -Path $resultFolder -ErrorAction Stop |
+        Out-Null
+
+    Write-Host "Extracting '$fileName'..." -ForegroundColor Cyan
+
+    # Extract the archive
     Expand-Archive -LiteralPath $filePath `
                    -DestinationPath $resultFolder `
                    -Force `
@@ -43,6 +49,6 @@ catch {
     Write-Host "Extraction failed: $_" -ForegroundColor Red
 }
 
-Read-Host "Press Enter to exit"
-
+Write-Host ""
+Read-Host "Press Enter to return to the menu"
 
