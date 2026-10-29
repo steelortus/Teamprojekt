@@ -9,7 +9,7 @@ run './main.ps1'
 
 ## Current Tasks:
 - [x] Script um OO dokumente in Folder zu konvertieren
-- [ ] Word Excel PP where metadata? (Abgesehen davon erstmal nur Word)
+- [x] Word Excel PP where metadata? (Abgesehen davon erstmal nur Word)
 - [ ] metadata xml to csv via xslt
 - [ ] Abweichende Metadaten von MSOffice LibreOffice OpenOffice
 - [ ] Metadaten auswerten in Bezug auf Datierung (Daten Created/Modified/Printed, Revision, Releasetermin Softwareversion, Releasetermine Fonts)
