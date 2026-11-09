@@ -1,5 +1,8 @@
 Ziele.odt
+.~lock.Ziele.odt#
 scripts/result
 scripts/result-[a-zA-Z0-9]*
 scripts/*.zip
 scripts/output.csv
+scripts/.~[a-zA-Z0-9]*
+scripts/compareOutput/.~[a-zA-Z0-9]*
