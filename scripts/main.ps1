@@ -7,7 +7,8 @@ $scripts = @(
     "getVersions.ps1",
     "printCsv.ps1",
     "csvByXslt.ps1", # TODO getFonts / saveFonts / checkFontDate
-    "compareOutput.ps1"
+    "compareOutput.ps1",
+    "countCharacters.ps1"
 )
 
 while ($true) {

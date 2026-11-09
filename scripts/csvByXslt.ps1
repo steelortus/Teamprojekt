@@ -1,4 +1,5 @@
-# Transform extracted Office metadata into a line-by-line CSV using XSLT.
+# Transform extracted Office metadata into output.csv using XSLT.
+# Produces the same CSV as printCsv.ps1.
 
 try {
     $resultFolder = $env:SELECTED_RESULT_FOLDER
@@ -9,7 +10,7 @@ try {
         return
     }
 
-    # Step 1: Determine the document type
+    # Step 1: Determine the document type (same logic as printCsv.ps1)
     if (Test-Path -LiteralPath (Join-Path $resultFolder "word") -PathType Container) {
         $filetype = "docx"
     }
@@ -19,8 +20,21 @@ try {
     elseif (Test-Path -LiteralPath (Join-Path $resultFolder "ppt") -PathType Container) {
         $filetype = "pptx"
     }
-    elseif (Test-Path -LiteralPath (Join-Path $resultFolder "meta.xml") -PathType Leaf) {
-        $filetype = "odt"
+    elseif (Test-Path -LiteralPath (Join-Path $resultFolder "mimetype") -PathType Leaf) {
+        # OpenDocument file
+        $mimetype = (Get-Content -LiteralPath (Join-Path $resultFolder "mimetype") -Raw).Trim()
+        $type = $mimetype.Split(".")[-1]
+
+        if ($type -eq "text") {
+            $filetype = "odt"
+        }
+        elseif ($type -eq "spreadsheet") {
+            $filetype = "ods"
+        }
+        else {
+            Write-Host "No supported file format found." -ForegroundColor Red
+            return
+        }
     }
     else {
         Write-Host "No supported Office or OpenDocument file found." -ForegroundColor Red
@@ -37,10 +51,11 @@ try {
     $combinedXml.XmlResolver = $null
 
     $root = $combinedXml.CreateElement("Metadata")
+    $root.SetAttribute("filetype", $filetype)
     $combinedXml.AppendChild($root) | Out-Null
 
     $metadataFiles = switch ($filetype) {
-        "odt" {
+        { $_ -in @("odt", "ods") } {
             @(
                 @{
                     Path = "meta.xml"
@@ -76,14 +91,10 @@ try {
             $sourceXml.XmlResolver = $null
             $sourceXml.Load($metadataFile.FullPath)
 
-            $section = $combinedXml.CreateElement("Section")
-            $section.SetAttribute("path", $metadataFile.Path)
-            $root.AppendChild($section) | Out-Null
-
             foreach ($node in $sourceXml.DocumentElement.ChildNodes) {
                 if ($node.NodeType -eq [System.Xml.XmlNodeType]::Element) {
                     $importedNode = $combinedXml.ImportNode($node, $true)
-                    $section.AppendChild($importedNode) | Out-Null
+                    $root.AppendChild($importedNode) | Out-Null
                 }
             }
 
@@ -101,9 +112,8 @@ try {
     }
 
     # Step 3: Define the XSLT transformation.
-    # Each leaf metadata element becomes one CSV row.
-    # All fields are quoted, and internal quotes are escaped.
-
+    # It produces the same single-row CSV as printCsv.ps1: the columns depend
+    # on the document type, all fields are quoted, internal quotes are escaped.
 
     $xsltText = @'
 <?xml version="1.0" encoding="utf-8"?>
@@ -111,6 +121,8 @@ try {
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
     <xsl:output method="text" encoding="utf-8"/>
+
+    <xsl:variable name="type" select="/Metadata/@filetype"/>
 
     <xsl:template name="csv-escape">
         <xsl:param name="text"/>
@@ -129,59 +141,88 @@ try {
         </xsl:choose>
     </xsl:template>
 
-    <xsl:template name="csv-field">
-        <xsl:param name="text"/>
+    <!-- One quoted field followed by a comma, or by a newline if last -->
+    <xsl:template name="f">
+        <xsl:param name="v" select="''"/>
+        <xsl:param name="last" select="false()"/>
         <xsl:text>"</xsl:text>
         <xsl:call-template name="csv-escape">
-            <xsl:with-param name="text" select="$text"/>
+            <xsl:with-param name="text" select="string($v)"/>
         </xsl:call-template>
         <xsl:text>"</xsl:text>
-    </xsl:template>
-
-    <xsl:template name="write-row">
-        <xsl:param name="path"/>
-        <xsl:param name="property"/>
-        <xsl:param name="value"/>
-
-        <xsl:call-template name="csv-field">
-            <xsl:with-param name="text" select="$path"/>
-        </xsl:call-template>
-        <xsl:text>,</xsl:text>
-        <xsl:call-template name="csv-field">
-            <xsl:with-param name="text" select="$property"/>
-        </xsl:call-template>
-        <xsl:text>,</xsl:text>
-        <xsl:call-template name="csv-field">
-            <xsl:with-param name="text" select="$value"/>
-        </xsl:call-template>
-        <xsl:text>&#10;</xsl:text>
+        <xsl:choose>
+            <xsl:when test="$last"><xsl:text>&#10;</xsl:text></xsl:when>
+            <xsl:otherwise><xsl:text>,</xsl:text></xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
 
     <xsl:template match="/">
-        <xsl:text>"Path","Property","Value"&#10;</xsl:text>
+        <xsl:choose>
 
-        <!-- Extract element values, including nested metadata elements -->
-        <xsl:for-each select="/Metadata/Section//*[not(*)]">
-            <xsl:if test="normalize-space(.) != ''">
-                <xsl:call-template name="write-row">
-                    <xsl:with-param name="path" select="../../@path"/>
-                    <xsl:with-param name="property" select="local-name()"/>
-                    <xsl:with-param name="value" select="normalize-space(.)"/>
-                </xsl:call-template>
-            </xsl:if>
-        </xsl:for-each>
+            <!-- docx: all columns; xlsx/pptx: same columns, text statistics empty -->
+            <xsl:when test="$type = 'docx' or $type = 'xlsx' or $type = 'pptx'">
+                <xsl:text>"Filetype","Author","Language","Revision","Application","Version","Created","Modified","TotalTime","Pages","Words","Characters","CharactersWithSpaces","Paragraphs"&#10;</xsl:text>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$type"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='creator']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='language']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='revision']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='Application']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='AppVersion']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='created']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='modified']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='TotalTime']"/></xsl:call-template>
+                <xsl:if test="$type = 'docx'">
+                    <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='Pages']"/></xsl:call-template>
+                    <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='Words']"/></xsl:call-template>
+                    <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='Characters']"/></xsl:call-template>
+                    <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='CharactersWithSpaces']"/></xsl:call-template>
+                    <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='Paragraphs']"/><xsl:with-param name="last" select="true()"/></xsl:call-template>
+                </xsl:if>
+                <xsl:if test="$type != 'docx'">
+                    <xsl:call-template name="f"/>
+                    <xsl:call-template name="f"/>
+                    <xsl:call-template name="f"/>
+                    <xsl:call-template name="f"/>
+                    <xsl:call-template name="f"><xsl:with-param name="last" select="true()"/></xsl:call-template>
+                </xsl:if>
+            </xsl:when>
 
-        <!-- Extract metadata attributes, such as ODT document statistics -->
-        <xsl:for-each select="/Metadata/Section//@*">
-            <xsl:if test="normalize-space(.) != ''">
-                <xsl:call-template name="write-row">
-                    <xsl:with-param name="path" select="../../@path"/>
-                    <xsl:with-param name="property"
-                        select="concat(local-name(..), '@', local-name())"/>
-                    <xsl:with-param name="value" select="normalize-space(.)"/>
-                </xsl:call-template>
-            </xsl:if>
-        </xsl:for-each>
+            <!-- odt -->
+            <xsl:when test="$type = 'odt'">
+                <xsl:variable name="stats" select="/Metadata/*[local-name()='document-statistic']"/>
+                <xsl:text>"Filetype","Revision","Application","Created","Modified","Duration","Tables","Objects","Pages","Words","Characters","CharactersWithSpaces","Paragraphs","Images"&#10;</xsl:text>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$type"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='editing-cycles']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='generator']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='creation-date']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='date']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='editing-duration']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='table-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='object-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='page-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='word-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='non-whitespace-character-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='character-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='paragraph-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='image-count']"/><xsl:with-param name="last" select="true()"/></xsl:call-template>
+            </xsl:when>
+
+            <!-- ods -->
+            <xsl:otherwise>
+                <xsl:variable name="stats" select="/Metadata/*[local-name()='document-statistic']"/>
+                <xsl:text>"Filetype","Revision","Application","Created","Modified","Duration","Tables","Objects","Cells"&#10;</xsl:text>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$type"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='editing-cycles']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='generator']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='creation-date']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='date']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="/Metadata/*[local-name()='editing-duration']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='table-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='object-count']"/></xsl:call-template>
+                <xsl:call-template name="f"><xsl:with-param name="v" select="$stats/@*[local-name()='cell-count']"/><xsl:with-param name="last" select="true()"/></xsl:call-template>
+            </xsl:otherwise>
+
+        </xsl:choose>
     </xsl:template>
 
 </xsl:stylesheet>
@@ -223,16 +264,9 @@ try {
     $utf8 = New-Object System.Text.UTF8Encoding($true)
     [System.IO.File]::WriteAllText($outputPath, $csvContent, $utf8)
 
-    $rowCount = @(
-        $csvContent -split "\r?\n" |
-        Select-Object -Skip 1 |
-        Where-Object { $_.Trim() }
-    ).Count
-
     Write-Host ""
     Write-Host "CSV created successfully!" -ForegroundColor Green
     Write-Host "File: $outputPath"
-    Write-Host "Metadata rows: $rowCount"
 }
 catch {
     Write-Host ""
