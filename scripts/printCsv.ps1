@@ -14,6 +14,20 @@ else {
         $filetype = "xlsx"
     } elseif (Test-Path -LiteralPath (Join-Path $resultFolder "ppt") -PathType Container) {
         $filetype = "pptx"
+    } elseif (Test-Path -LiteralPath (Join-Path $resultFolder "mimetype") -PathType Leaf) {
+        # OpenDocument File
+        $mimetype = (Get-Content -LiteralPath (Join-Path $resultFolder "mimetype") -Raw).Trim()
+        $type = $mimetype.Split(".")[-1]
+
+        if ($type -eq "text") {
+            $filetype = "odt"
+        } elseif ($type -eq "spreadsheet") {
+            $filetype = "ods"
+        } else {
+            Write-Host "No supported file format found."
+            Read-Host "Press Enter to return to the menu:"
+            return;
+        }
     } else {
         Write-Host "No supported file format found."
         Read-Host "Press Enter to return to the menu:"
@@ -28,55 +42,99 @@ else {
     Write-Host "Scanning for information..." -ForegroundColor Cyan
     Write-Host ""
 
-    $coreXml = Join-Path $resultFolder "docProps\core.xml"
-    if (-not (Test-Path -LiteralPath $coreXml -PathType Leaf)) {
-        Write-Host "Metadata file not found: $coreXml" -ForegroundColor Red
-    }
-    else {
-        try {
-            [xml]$metadata = Get-Content -LiteralPath $coreXml -Raw -ErrorAction Stop
-
-            $authorNode = $metadata.SelectSingleNode("//*[local-name()='creator']").InnerText
-            $language = $metadata.SelectSingleNode("//*[local-name()='language']").InnerText
-            $revision = $metadata.SelectSingleNode("//*[local-name()='revision']").InnerText
-            $createdTime   = $metadata.SelectSingleNode("//*[local-name()='created']").InnerText
-            $modifiedTime   = $metadata.SelectSingleNode("//*[local-name()='modified']").InnerText
-
-            #Write-Host "Author: $authorNode"
-            #Write-Host "Language: $language"
-            #Write-Host "Revision: $revision"
+    if ($filetype -eq "docx" -or $filetype -eq "xlsx" -or $filetype -eq "pptx") {
+        $coreXml = Join-Path $resultFolder "docProps\core.xml"
+        if (-not (Test-Path -LiteralPath $coreXml -PathType Leaf)) {
+            Write-Host "Metadata file not found: $coreXml" -ForegroundColor Red
         }
-        catch {
-            Write-Host "Could not read document metadata: $_" -ForegroundColor Red
-        }
-    }
+        else {
+            try {
+                [xml]$metadata = Get-Content -LiteralPath $coreXml -Raw -ErrorAction Stop
 
-    $appXml = Join-Path $resultFolder "docProps\app.xml"
-    if (-not (Test-Path -LiteralPath $appXml -PathType Leaf)) {
-        Write-Host "Application metadata file not found: $appXml" -ForegroundColor Red
-    }
-    else {
-        try {
-            [xml]$appXmlData = Get-Content -LiteralPath $appXml -Raw -ErrorAction Stop
+                $authorNode = $metadata.SelectSingleNode("//*[local-name()='creator']").InnerText
+                $language = $metadata.SelectSingleNode("//*[local-name()='language']").InnerText
+                $revision = $metadata.SelectSingleNode("//*[local-name()='revision']").InnerText
+                $createdTime   = $metadata.SelectSingleNode("//*[local-name()='created']").InnerText
+                $modifiedTime   = $metadata.SelectSingleNode("//*[local-name()='modified']").InnerText
 
-            $application = $appXmlData.SelectSingleNode("//*[local-name()='Application']").InnerText
-            $version     = $appXmlData.SelectSingleNode("//*[local-name()='AppVersion']").InnerText
-            $totalTime   = $appXmlData.SelectSingleNode("//*[local-name()='TotalTime']").InnerText
-
-            if ($filetype -eq "docx") {
-                $pages   = $appXmlData.SelectSingleNode("//*[local-name()='Pages']").InnerText
-                $words   = $appXmlData.SelectSingleNode("//*[local-name()='Words']").InnerText
-                $characters   = $appXmlData.SelectSingleNode("//*[local-name()='Characters']").InnerText
-                $charactersWithSpaces   = $appXmlData.SelectSingleNode("//*[local-name()='CharactersWithSpaces']").InnerText
-                $paragraphs   = $appXmlData.SelectSingleNode("//*[local-name()='Paragraphs']").InnerText
+                #Write-Host "Author: $authorNode"
+                #Write-Host "Language: $language"
+                #Write-Host "Revision: $revision"
             }
-
-            #Write-Host "Application: $application"
-            #Write-Host "Version: $version"
-            #Write-Host "Total Time: $totalTime"
+            catch {
+                Write-Host "Could not read document metadata: $_" -ForegroundColor Red
+            }
         }
-        catch {
-            Write-Host "Could not read application metadata: $_" -ForegroundColor Red
+
+        $appXml = Join-Path $resultFolder "docProps\app.xml"
+        if (-not (Test-Path -LiteralPath $appXml -PathType Leaf)) {
+            Write-Host "Application metadata file not found: $appXml" -ForegroundColor Red
+        }
+        else {
+            try {
+                [xml]$appXmlData = Get-Content -LiteralPath $appXml -Raw -ErrorAction Stop
+
+                $application = $appXmlData.SelectSingleNode("//*[local-name()='Application']").InnerText
+                $version     = $appXmlData.SelectSingleNode("//*[local-name()='AppVersion']").InnerText
+                $totalTime   = $appXmlData.SelectSingleNode("//*[local-name()='TotalTime']").InnerText
+
+                if ($filetype -eq "docx") {
+                    $pages   = $appXmlData.SelectSingleNode("//*[local-name()='Pages']").InnerText
+                    $words   = $appXmlData.SelectSingleNode("//*[local-name()='Words']").InnerText
+                    $characters   = $appXmlData.SelectSingleNode("//*[local-name()='Characters']").InnerText
+                    $charactersWithSpaces   = $appXmlData.SelectSingleNode("//*[local-name()='CharactersWithSpaces']").InnerText
+                    $paragraphs   = $appXmlData.SelectSingleNode("//*[local-name()='Paragraphs']").InnerText
+                }
+
+                #Write-Host "Application: $application"
+                #Write-Host "Version: $version"
+                #Write-Host "Total Time: $totalTime"
+            }
+            catch {
+                Write-Host "Could not read application metadata: $_" -ForegroundColor Red
+            }
+        }
+    
+    
+    
+    } elseif ($filetype -eq "odt" -or $filetype -eq "ods") {
+        $metaXml = Join-Path $resultFolder "meta.xml"
+        if (-not (Test-Path -LiteralPath $metaXml -PathType Leaf)) {
+            Write-Host "Metadata file not found: $metaXml" -ForegroundColor Red
+        } else {
+            try {
+                [xml]$metadata = Get-Content -LiteralPath $metaXml -Raw -ErrorAction Stop
+                $application = $metadata.SelectNodes("//*[local-name()='generator']").InnerText
+                $createdTime = $metadata.SelectNodes("//*[local-name()='creation-date']").InnerText
+                $modifiedTime = $metadata.SelectNodes("//*[local-name()='date']").InnerText
+                $revision = $metadata.SelectNodes("//*[local-name()='editing-cycles']").InnerText
+                $editingDuration = $metadata.SelectNodes("//*[local-name()='editing-duration']").InnerText
+
+                $stats = $metadata.SelectNodes("//*[local-name()='document-statistic']")
+                $namespace = $stats[0].NamespaceURI
+
+                $tableCount = $stats.GetAttribute("table-count", $namespace)
+                $objectCount = $stats.GetAttribute("object-count", $namespace)
+
+                if ($filetype -eq "odt") {
+                    $imageCount = $stats.GetAttribute("image-count", $namespace)
+                    $pages = $stats.GetAttribute("page-count", $namespace)
+                    $paragraphs = $stats.GetAttribute("paragraph-count", $namespace)
+                    $words = $stats.GetAttribute("word-count", $namespace)
+                    $charactersWithSpaces = $stats.GetAttribute("character-count", $namespace)
+                    $characters = $stats.GetAttribute("non-whitespace-character-count", $namespace)
+                } elseif ($filetype -eq "ods") {
+                    $cells = $stats.GetAttribute("cell-count", $namespace)
+                }
+
+                # Konnte die folgenden 3 Werte nicht in OpenDocument Dateien finden, aber vielleicht bin Ich auch nur blind... 
+                #$authorNode = $metadata.SelectSingleNode("//*[local-name()='creator']").InnerText
+                #$language = $metadata.SelectSingleNode("//*[local-name()='language']").InnerText
+                #$version     = $appXmlData.SelectSingleNode("//*[local-name()='AppVersion']").InnerText
+            }
+            catch {
+                Write-Host "Could not read document metadata: $_" -ForegroundColor Red
+            }
         }
     }
 
@@ -86,42 +144,80 @@ else {
     Write-Host "Printing the CSV..." -ForegroundColor Cyan
     Write-Host ""
 
-    if ($filetype -eq "docx") {
-        [PSCustomObject]@{
-            #Filename = $fileName //TODO
-            Filetype    = $filetype
-            Author      = $authorNode
-            Language    = $language
-            Revision    = $revision
-            Application = $application
-            Version     = $version
-            Created     = $createdTime
-            Modified    = $modifiedTime
-            TotalTime   = $totalTime
-            Pages       = $pages
-            Words       = $words
-            Characters  = $characters
-            CharactersWithSpaces = $charactersWithSpaces
-            Paragraphs  = $paragraphs
-        } | Export-Csv -Path (Join-Path "$resultFolder\.." "output.csv") -NoTypeInformation -Encoding utf8
-    } else {
-        [PSCustomObject]@{
-            #Filename = $fileName //TODO
-            Filetype    = $filetype
-            Author      = $authorNode
-            Language    = $language
-            Revision    = $revision
-            Application = $application
-            Version     = $version
-            Created     = $createdTime
-            Modified    = $modifiedTime
-            TotalTime   = $totalTime
-            Pages       = ""
-            Words       = ""
-            Characters  = ""
-            CharactersWithSpaces = ""
-            Paragraphs  = ""
-        } | Export-Csv -Path (Join-Path "$resultFolder\.." "output.csv") -NoTypeInformation -Encoding utf8
+    if ($filetype -eq "docx" -or $filetype -eq "xlsx" -or $filetype -eq "pptx") {
+        if ($filetype -eq "docx") {
+            [PSCustomObject]@{
+                #Filename = $fileName //TODO
+                Filetype    = $filetype
+                Author      = $authorNode
+                Language    = $language
+                Revision    = $revision
+                Application = $application
+                Version     = $version
+                Created     = $createdTime
+                Modified    = $modifiedTime
+                TotalTime   = $totalTime
+                Pages       = $pages
+                Words       = $words
+                Characters  = $characters
+                CharactersWithSpaces = $charactersWithSpaces
+                Paragraphs  = $paragraphs
+            } | Export-Csv -Path (Join-Path "$resultFolder\.." "output.csv") -NoTypeInformation -Encoding utf8
+        } else {
+            [PSCustomObject]@{
+                #Filename = $fileName //TODO
+                Filetype    = $filetype
+                Author      = $authorNode
+                Language    = $language
+                Revision    = $revision
+                Application = $application
+                Version     = $version
+                Created     = $createdTime
+                Modified    = $modifiedTime
+                TotalTime   = $totalTime
+                Pages       = ""
+                Words       = ""
+                Characters  = ""
+                CharactersWithSpaces = ""
+                Paragraphs  = ""
+            } | Export-Csv -Path (Join-Path "$resultFolder\.." "output.csv") -NoTypeInformation -Encoding utf8
+        }
+
+
+
+    } elseif ($filetype -eq "odt" -or $filetype -eq "ods") {
+        if ($filetype -eq "odt") {
+            [PSCustomObject]@{
+                #Filename = $fileName //TODO
+                Filetype    = $filetype
+                Revision    = $revision
+                Application = $application
+                Created     = $createdTime
+                Modified    = $modifiedTime
+                Duration    = $editingDuration
+                Tables      = $tableCount
+                Objects     = $objectCount
+                Pages       = $pages
+                Words       = $words
+                Characters  = $characters
+                CharactersWithSpaces = $charactersWithSpaces
+                Paragraphs  = $paragraphs
+                Images      = $imageCount
+            } | Export-Csv -Path (Join-Path "$resultFolder\.." "output.csv") -NoTypeInformation -Encoding utf8
+        } elseif ($filetype -eq "ods") {
+            [PSCustomObject]@{
+                #Filename = $fileName //TODO
+                Filetype    = $filetype
+                Revision    = $revision
+                Application = $application
+                Created     = $createdTime
+                Modified    = $modifiedTime
+                Duration    = $editingDuration
+                Tables      = $tableCount
+                Objects     = $objectCount
+                Cells       = $cells
+            } | Export-Csv -Path (Join-Path "$resultFolder\.." "output.csv") -NoTypeInformation -Encoding utf8
+        }
     }
 
     Write-Host "Done!" -ForegroundColor Green
