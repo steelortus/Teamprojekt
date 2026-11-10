@@ -12,20 +12,28 @@ run './main.ps1'
 - [x] Word Excel PP where metadata? (Abgesehen davon erstmal nur Word)
 - [x] metadata xml to csv via xslt
 - [ ] Abweichende Metadaten von MSOffice LibreOffice OpenOffice
-- [ ] Metadaten auswerten in Bezug auf Datierung (Daten Created/Modified/Printed, Revision, Releasetermin Softwareversion, Releasetermine Fonts)
-- [ ] In RSIDs einarbeiten
+- [ ] Metadaten auswerten in Bezug auf Datierung (Daten Created/Modified/Printed, Revision, Releasetermin Softwareversion, Releasetermine Fonts, Language)
+- [x] In RSIDs einarbeiten
 - [x] Anzahl Zeichen im Dokument ermitteln (mit und ohne Leerzeichen) Ermittelte Anzahl Zeichen im Dokument vergleichen mit zugehörigem Wert in Metadaten
 
-## Other Tasks:
+## Optional Tasks:
 - [x] dateiendung nicht verwenden um die richtige auslese zu finden
 - [ ] datastructure for versions, releases, fontreleases, also: fontrelease vs fontrelease in software
 - [ ] rsid (revision safe identifiers) nutzen finden. verleich word vs libreoffice
+- [ ] change main to scan for ps1 scripts instead of manually saving them.
+- [ ] Dev-script to automatically test multiple files
+- [ ] What counts as a word (Absätze)
+- [ ] What characters are counted by docx that are not counted by script?
+- [ ] Compare RSIDs from settings.xml to document.xml
+- [ ] Do Word and Writer count differently
+- [ ] Change a file multiple times and compare the RSIDs
 
 ## Extra:
-Folder -> Get oldets doc/ get newest doc
+- [ ] Folder -> Get oldets doc/ get newest doc
 
 
 ## Thinking for later:
-- Was ist versionsnummer? Intern öffentlich identisch? Wann auf den markt gekommen
-- Datastructure for changes across versions and versions across time
-- change metadata to test calculations vs read (number of words)
+- [ ] Was ist versionsnummer? Intern öffentlich identisch? Wann auf den markt gekommen
+- [x] Datastructure for changes across versions and versions across time -> multiple CSVs
+- [x] change metadata to test calculations vs read (number of words)
+- [ ] welchen Zeiträumen wurden welche Sprachkennzeichnungen
