@@ -15,6 +15,11 @@ run './main.ps1'
 - [ ] Metadaten auswerten in Bezug auf Datierung (Daten Created/Modified/Printed, Revision, Releasetermin Softwareversion, Releasetermine Fonts, Language)
 - [x] In RSIDs einarbeiten
 - [x] Anzahl Zeichen im Dokument ermitteln (mit und ohne Leerzeichen) Ermittelte Anzahl Zeichen im Dokument vergleichen mit zugehörigem Wert in Metadaten
+- [ ] Anzahl Absätze im Dokumentermitteln und vergleichen mit Metadaten
+- [ ] Im Dokument gekennzeichnete Sprachen für Textabschnitte ermitteln
+- [ ] In welchen Zeiträumen wurden diese Sprachkennzeichnungen verwendet (ab welchem Zeitpunkt eingeführt/veraltet?)
+- [ ] Ermittlung RSIDs für Dokument, paragraphs, runs
+- [ ] Abgleich RSIDs in Dokument mit RSIDs in Metadaten
 
 ## Optional Tasks:
 - [x] dateiendung nicht verwenden um die richtige auslese zu finden
@@ -27,10 +32,6 @@ run './main.ps1'
 - [ ] Compare RSIDs from settings.xml to document.xml
 - [ ] Do Word and Writer count differently
 - [ ] Change a file multiple times and compare the RSIDs
-
-## Extra:
-- [ ] Folder -> Get oldets doc/ get newest doc
-
 
 ## Thinking for later:
 - [ ] Was ist versionsnummer? Intern öffentlich identisch? Wann auf den markt gekommen
