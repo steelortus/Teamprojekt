@@ -1,15 +1,35 @@
 
 $scriptFolder = $PSScriptRoot
 
-$scripts = @(
-    "fileToFolder.ps1",
-    "getAuthor.ps1",
-    "getVersions.ps1",
-    "printCsv.ps1",
-    "csvByXslt.ps1", # TODO getFonts / saveFonts / checkFontDate
-    "compareOutput.ps1",
-    "countCharacters.ps1"
+# Auto-discover the scripts in this folder. Scripts starting with "dev-" are
+# development tools and are not shown in the interactive menu.
+$launcherName = $MyInvocation.MyCommand.Name
+
+$foundScripts = @(
+    Get-ChildItem -LiteralPath $scriptFolder -Filter "*.ps1" -File |
+        Where-Object {
+            $_.Name -ne $launcherName -and
+            $_.Name -notlike "dev-*"
+        } |
+        Select-Object -ExpandProperty Name
 )
+
+# Keep a sensible order for the known scripts; any new script is appended
+# alphabetically, so adding a file to this folder is enough to register it.
+$preferredOrder = @(
+    "fileToFolder.ps1"
+)
+
+$scripts = @(
+    $preferredOrder | Where-Object { $foundScripts -contains $_ }
+) + @(
+    $foundScripts |
+        Where-Object { $preferredOrder -notcontains $_ } |
+        Sort-Object
+)
+
+# These scripts do not need a result folder selected by the menu.
+$noResultFolderScripts = @("fileToFolder.ps1", "compareOutput.ps1")
 
 while ($true) {
     Clear-Host
@@ -43,8 +63,8 @@ while ($true) {
     $selectedScript = $scripts[[int]$choice - 1]
     $scriptPath = Join-Path $scriptFolder $selectedScript
 
-    # Scripts other than fileToFolder.ps1 need a result folder
-    if ([int]$choice -ne 1) {
+    # Most scripts need a result folder selected by the menu
+    if ($selectedScript -notin $noResultFolderScripts) {
         $resultFolders = @(
             Get-ChildItem -LiteralPath $scriptFolder -Directory |
                 Where-Object {

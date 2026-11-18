@@ -1,6 +1,7 @@
 # countCharacters.ps1
 # Count the characters in the document body (with and without whitespace)
-# and compare the result with the values stored in the metadata.
+# and the number of paragraphs, then compare the results with the values
+# stored in the metadata.
 #
 # Supported: docx (word/document.xml + docProps/app.xml)
 #            odt  (content.xml + meta.xml)
@@ -44,6 +45,8 @@ else {
     $counted = $null          # text of all paragraphs, joined without separators
     $metaWith = $null
     $metaWithout = $null
+    $paragraphCount = $null
+    $metaParagraphs = $null
 
     $documentXml = Join-Path $resultFolder "word\document.xml"
     $contentXml  = Join-Path $resultFolder "content.xml"
@@ -70,12 +73,14 @@ else {
                 }
             }
             $counted = $sb.ToString()
+            $paragraphCount = $doc.SelectNodes("//*[local-name()='p']").Count
 
             $appXml = Join-Path $resultFolder "docProps\app.xml"
             if (Test-Path -LiteralPath $appXml -PathType Leaf) {
                 [xml]$app = Get-Content -LiteralPath $appXml -Raw -ErrorAction Stop
                 $metaWithout = $app.SelectSingleNode("//*[local-name()='Characters']").InnerText
                 $metaWith    = $app.SelectSingleNode("//*[local-name()='CharactersWithSpaces']").InnerText
+                $metaParagraphs = $app.SelectSingleNode("//*[local-name()='Paragraphs']").InnerText
             }
             else {
                 Write-Host "Metadata file not found: $appXml" -ForegroundColor Yellow
@@ -91,6 +96,7 @@ else {
                 [void]$sb.Append((Get-OdfText $p))
             }
             $counted = $sb.ToString()
+            $paragraphCount = $doc.SelectNodes("//*[local-name()='p' or local-name()='h'][not(ancestor::*[local-name()='p' or local-name()='h'])]").Count
 
             $metaXml = Join-Path $resultFolder "meta.xml"
             if (Test-Path -LiteralPath $metaXml -PathType Leaf) {
@@ -100,6 +106,7 @@ else {
                     $ns = $stats.NamespaceURI
                     $metaWith    = $stats.GetAttribute("character-count", $ns)
                     $metaWithout = $stats.GetAttribute("non-whitespace-character-count", $ns)
+                    $metaParagraphs = $stats.GetAttribute("paragraph-count", $ns)
                 }
             }
             else {
@@ -135,6 +142,11 @@ else {
                 Measure  = "Characters (with spaces)"
                 Counted  = $withSpacesCount
                 Metadata = $metaWith
+            },
+            [PSCustomObject]@{
+                Measure  = "Paragraphs"
+                Counted  = $paragraphCount
+                Metadata = $metaParagraphs
             }
         )
 
