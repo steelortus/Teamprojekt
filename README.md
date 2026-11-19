@@ -21,6 +21,7 @@ run './main.ps1'
 - [ ] Ermittlung RSIDs für Dokument, paragraphs, runs
 - [x] Abgleich RSIDs in Dokument mit RSIDs in Metadaten (List all RSIDs only on one of them both)
 
+
 ## Optional Tasks:
 - [x] dateiendung nicht verwenden um die richtige auslese zu finden
 - [ ] datastructure for versions, releases, fontreleases, also: fontrelease vs fontrelease in software
@@ -32,23 +33,25 @@ run './main.ps1'
 - [x] Compare RSIDs from settings.xml to document.xml
 - [x] Do Word and Writer count differently - no
 - [ ] Change a file multiple times and compare the RSIDs
+- [ ] Get list of languages and percentages how many percent are that language
+- [ ] Where are all the RSIDs
+- [ ] Are all RSIDs (p/r/etc) chacked in the compare RSIDs script
+- [ ] Wie ändern sich RSIDs, wenn Dokumente verändert werden. (neues zeichen, zeichen löschen, neuer paragraph, etc)
+
 
 ## Thinking for later:
 - [ ] Was ist versionsnummer? Intern öffentlich identisch? Wann auf den markt gekommen
 - [x] Datastructure for changes across versions and versions across time -> multiple CSVs
 - [x] change metadata to test calculations vs read (number of words)
-- [ ] welchen Zeiträumen wurden welche Sprachkennzeichnungen
+- [ ] dev-script to auto tell all RSIDs with one click
+- [ ] script um die datei wieder zu zippen
 
 
 
 
 ## Issues:
-- [ ] No Idea, how things are being counted. Absätze sollten <w:p> sein aber sind nciht.
+- [ ] No Idea, how things are being counted. Absätze sollten <w:p> sein aber sind nicht.
     - `test_long.docx` 133/35
     - `ProccessorAgreement.docx` 579/58
     - `SoftwareOrder.docx` 43/1
 - [ ] RSID sind zu unterschiedlich `ProccessorAgreement.docx`: 170 settings.xml vs 48 document parts -> daher auch keine ermittlung der RSIDs
-
-## Data files:
-- `scripts/compareOutput/officeReleases.csv` - Office version -> release date.
-- `scripts/compareOutput/languageTags.csv` - language tag -> first Windows version/date (MS-LCID Appendix A <8>), availability in the Office 2013/2016 language tables, and deprecated/legacy tags with their preferred successor (IANA subtag registry, CLDR aliases). `FirstWindowsDate` is the approximate general-availability date of that Windows release. An empty `Office2013`/`Office2016` cell means "not confirmed in that version's localized-language list", not "unavailable".
